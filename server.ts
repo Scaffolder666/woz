@@ -32,7 +32,7 @@ app.prepare().then(() => {
   io.on('connection', (socket) => {
     console.log('Client connected:', socket.id)
 
-    socket.on('join-session', (data: { sessionId: string; role: 'expert' | 'learner' }) => {
+    socket.on('join-session', async (data: { sessionId: string; role: 'expert' | 'learner' }) => {
       const { sessionId, role } = data
       socket.join(sessionId)
       console.log(`${role} joined session: ${sessionId}`)
@@ -41,11 +41,11 @@ app.prepare().then(() => {
       socket.to(sessionId).emit('user-joined', { role })
 
       // Send existing messages to the newly joined user
-      const messages = dbHelpers.getMessages(sessionId)
+      const messages = await dbHelpers.getMessages(sessionId)
       socket.emit('load-messages', messages)
     })
 
-    socket.on('send-message', (data: { sessionId: string; role: 'expert' | 'learner'; content: string }) => {
+    socket.on('send-message', async (data: { sessionId: string; role: 'expert' | 'learner'; content: string }) => {
       const { sessionId, role, content } = data
       
       const message: Message = {
@@ -56,15 +56,15 @@ app.prepare().then(() => {
       }
 
       // Save to database
-      const savedMessage = dbHelpers.saveMessage(message)
+      const savedMessage = await dbHelpers.saveMessage(message)
 
       // Broadcast to all users in the session
       io.to(sessionId).emit('new-message', savedMessage)
     })
 
-    socket.on('end-session', (data: { sessionId: string }) => {
+    socket.on('end-session', async (data: { sessionId: string }) => {
       const { sessionId } = data
-      dbHelpers.endSession(sessionId)
+      await dbHelpers.endSession(sessionId)
       io.to(sessionId).emit('session-ended')
     })
 

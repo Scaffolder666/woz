@@ -248,47 +248,57 @@ npm start
 
 ## Deployment
 
-### Deploy to Railway (Recommended - Free $5/month credit)
+### Deploy to Vercel + Turso (Recommended - Free)
 
-Railway 支持 SQLite 持久存储，最适合这个项目：
+最佳方案：Vercel（免费托管）+ Turso（免费云 SQLite）
 
-1. **确保代码已推送到 GitHub**
+#### 1. 创建 Turso 数据库
+
+```bash
+# 安装 Turso CLI
+curl -sSfL https://get.tur.so/install.sh | bash
+
+# 注册/登录
+turso auth signup  # 或 turso auth login
+
+# 创建数据库
+turso db create woz-db
+
+# 获取数据库 URL
+turso db show woz-db --url
+
+# 创建访问 token
+turso db tokens create woz-db
+```
+
+保存输出的 URL 和 Token，下一步需要用。
+
+#### 2. 部署到 Vercel
+
+1. **推送代码到 GitHub:**
    ```bash
    git add .
-   git commit -m "Add Railway config"
+   git commit -m "Add Turso support"
    git push
    ```
 
-2. **部署到 Railway:**
-   - 访问 [railway.app](https://railway.app)
-   - 用 GitHub 账号登录
-   - 点击 "New Project" → "Deploy from GitHub repo"
-   - 选择你的 `Scaffolder666/woz` 仓库
-   - Railway 会自动检测配置并开始部署
+2. **在 Vercel 部署:**
+   - 访问 [vercel.com](https://vercel.com)
+   - 点击 "New Project"
+   - 导入你的 GitHub 仓库
+   - **添加环境变量**（重要！）：
+     - `TURSO_DATABASE_URL`: 你的 Turso 数据库 URL
+     - `TURSO_AUTH_TOKEN`: 你的 Turso token
+   - 点击 "Deploy"
 
-3. **配置持久化存储（重要！）:**
-   - 点击你的项目
-   - 进入 "Settings" → "Volumes"
-   - 点击 "New Volume"
-   - Mount Path: `/app/data`
-   - 点击 "Add"
-   - **重新部署**项目（点击 "Deployments" → "Deploy"）
+3. **完成！** 🎉
+   - 全球 CDN 加速
+   - 数据永久保存在云端
+   - 完全免费
 
-4. **配置域名:**
-   - 进入 "Settings" → "Networking"
-   - 点击 "Generate Domain"
-   - 你会得到一个公网 URL，如 `https://woz-production.up.railway.app`
+### 本地开发
 
-5. **完成！** 🎉
-   - 数据库会持久保存（即使重新部署）
-   - 全球可访问
-   - 免费 $5 额度/月（够用）
-
-**重要提示：** 如果不配置 Volume，每次部署数据库都会被清空！
-
-### Alternative: Deploy to Vercel (Free but no SQLite)
-
-**注意：** Vercel 不支持 SQLite 的本地编译，需要改用 Vercel Postgres。
+本地开发会自动使用 SQLite 文件数据库（`data/chat.db`），不需要配置 Turso。
 
 ## Troubleshooting
 

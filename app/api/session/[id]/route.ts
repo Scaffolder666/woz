@@ -7,13 +7,13 @@ export async function GET(
 ) {
   try {
     const sessionId = params.id
-    const session = dbHelpers.getSession(sessionId)
+    const session = await dbHelpers.getSession(sessionId)
     
     if (!session) {
       return NextResponse.json({ error: 'Session not found' }, { status: 404 })
     }
 
-    const messages = dbHelpers.getMessages(sessionId)
+    const messages = await dbHelpers.getMessages(sessionId)
     
     return NextResponse.json({ session, messages })
   } catch (error) {
