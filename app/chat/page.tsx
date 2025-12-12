@@ -36,9 +36,7 @@ export default function ChatPage() {
     if (!sessionId || !role) return
 
     // Use window.location.origin to connect to the same server that served the page
-    const socketInstance = io(window.location.origin, {
-      path: '/api/socketio'
-    })
+    const socketInstance = io(window.location.origin)
 
     socketInstance.on('connect', () => {
       console.log('Connected to server')
