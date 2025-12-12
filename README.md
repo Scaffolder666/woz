@@ -248,40 +248,38 @@ npm start
 
 ## Deployment
 
-### Deploy to Vercel (Recommended - Free)
+### Deploy to Railway (Recommended - Free $5/month credit)
 
-1. **Push your code to GitHub:**
+Railway 支持 SQLite 持久存储，最适合这个项目：
+
+1. **确保代码已推送到 GitHub**
    ```bash
-   git init
    git add .
-   git commit -m "Initial commit"
-   git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO.git
-   git push -u origin main
+   git commit -m "Add Railway config"
+   git push
    ```
 
-2. **Deploy on Vercel:**
-   - Go to [vercel.com](https://vercel.com) and sign up (free)
-   - Click "New Project"
-   - Import your GitHub repository
-   - Click "Deploy" (no configuration needed!)
+2. **部署到 Railway:**
+   - 访问 [railway.app](https://railway.app)
+   - 用 GitHub 账号登录
+   - 点击 "New Project" → "Deploy from GitHub repo"
+   - 选择你的 `Scaffolder666/woz` 仓库
+   - Railway 会自动检测配置并开始部署
 
-3. **Access your app:**
-   - Vercel will give you a URL like `https://your-app.vercel.app`
-   - Share this URL with Expert and Learner
-   - Works from anywhere in the world! 🌍
+3. **配置域名:**
+   - 部署完成后，点击项目
+   - 进入 "Settings" → "Networking"
+   - 点击 "Generate Domain"
+   - 你会得到一个公网 URL，如 `https://woz-production.up.railway.app`
 
-**Note:** SQLite database will reset on each deployment. For production use, consider:
-- Using Vercel Postgres (free tier available)
-- Or deploy to Railway instead (supports persistent SQLite)
+4. **完成！** 🎉
+   - 数据库会持久保存
+   - 全球可访问
+   - 免费 $5 额度/月（够用）
 
-### Alternative: Deploy to Railway ($5/month)
+### Alternative: Deploy to Vercel (Free but no SQLite)
 
-Railway is better if you need persistent SQLite database:
-
-1. Go to [railway.app](https://railway.app)
-2. Connect your GitHub repo
-3. Deploy automatically
-4. Database persists between deployments
+**注意：** Vercel 不支持 SQLite 的本地编译，需要改用 Vercel Postgres。
 
 ## Troubleshooting
 
