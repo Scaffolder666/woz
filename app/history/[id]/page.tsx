@@ -9,7 +9,14 @@ interface Message {
   session_id: string
   role: 'expert' | 'learner'
   content: string
+  message_type?: 'text' | 'multiple_choice' | 'choice_response'
+  metadata?: string
   timestamp: number
+}
+
+interface MultipleChoiceData {
+  question: string
+  options: string[]
 }
 
 interface Session {
@@ -72,11 +79,24 @@ export default function TranscriptPage() {
           : null,
         message_count: messages.length
       },
-      messages: messages.map(msg => ({
-        role: msg.role,
-        content: msg.content,
-        timestamp: new Date(msg.timestamp).toISOString()
-      }))
+      messages: messages.map(msg => {
+        const baseMessage: any = {
+          role: msg.role,
+          content: msg.content,
+          message_type: msg.message_type || 'text',
+          timestamp: new Date(msg.timestamp).toISOString()
+        }
+        
+        if (msg.metadata) {
+          try {
+            baseMessage.metadata = JSON.parse(msg.metadata)
+          } catch (e) {
+            baseMessage.metadata = msg.metadata
+          }
+        }
+        
+        return baseMessage
+      })
     }
 
     const blob = new Blob([JSON.stringify(output, null, 2)], { type: 'application/json' })
@@ -178,38 +198,90 @@ export default function TranscriptPage() {
               <p className="text-gray-500">No messages in this session</p>
             </div>
           ) : (
-            messages.map((msg) => (
-              <div
-                key={msg.id}
-                className="bg-white rounded-lg shadow p-4"
-              >
-                <div className="flex items-start gap-4">
-                  <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-lg ${
-                    msg.role === 'expert' 
-                      ? 'bg-purple-100' 
-                      : 'bg-blue-100'
-                  }`}>
-                    {msg.role === 'expert' ? '👨‍🏫' : '🎓'}
-                  </div>
-                  
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <span className={`font-semibold ${
-                        msg.role === 'expert' ? 'text-purple-600' : 'text-blue-600'
-                      }`}>
-                        {msg.role === 'expert' ? 'Expert' : 'Learner'}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        {formatTime(msg.timestamp)}
-                      </span>
+            messages.map((msg) => {
+              const isMCQ = msg.message_type === 'multiple_choice'
+              const isChoiceResponse = msg.message_type === 'choice_response'
+              
+              let mcqData: MultipleChoiceData | null = null
+              let responseData: any = null
+              
+              if (isMCQ && msg.metadata) {
+                try {
+                  mcqData = JSON.parse(msg.metadata)
+                } catch (e) {}
+              }
+              
+              if (isChoiceResponse && msg.metadata) {
+                try {
+                  responseData = JSON.parse(msg.metadata)
+                } catch (e) {}
+              }
+              
+              return (
+                <div
+                  key={msg.id}
+                  className="bg-white rounded-lg shadow p-4"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-lg ${
+                      msg.role === 'expert' 
+                        ? 'bg-purple-100' 
+                        : 'bg-blue-100'
+                    }`}>
+                      {msg.role === 'expert' ? '👨‍🏫' : '🎓'}
                     </div>
-                    <p className="text-gray-800 whitespace-pre-wrap break-words">
-                      {msg.content}
-                    </p>
+                    
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className={`font-semibold ${
+                          msg.role === 'expert' ? 'text-purple-600' : 'text-blue-600'
+                        }`}>
+                          {msg.role === 'expert' ? 'Expert' : 'Learner'}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {formatTime(msg.timestamp)}
+                        </span>
+                        {isMCQ && (
+                          <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full font-medium">
+                            Multiple Choice
+                          </span>
+                        )}
+                        {isChoiceResponse && (
+                          <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">
+                            Answer
+                          </span>
+                        )}
+                      </div>
+                      
+                      {isMCQ && mcqData ? (
+                        <div>
+                          <p className="text-gray-800 font-semibold mb-3">{mcqData.question}</p>
+                          <div className="space-y-2">
+                            {mcqData.options.map((option, idx) => (
+                              <div
+                                key={idx}
+                                className="bg-purple-50 border border-purple-200 rounded-lg px-3 py-2 text-gray-700"
+                              >
+                                {String.fromCharCode(65 + idx)}. {option}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : isChoiceResponse && responseData ? (
+                        <div>
+                          <p className="text-xs text-gray-500 mb-1">Answer to: {responseData.question}</p>
+                          <p className="text-gray-800 font-medium">✓ {responseData.answer}</p>
+                        </div>
+                      ) : (
+                        <p className="text-gray-800 whitespace-pre-wrap break-words">
+                          {msg.content}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))
+              )
+            })
           )}
         </div>
       </div>
