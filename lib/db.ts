@@ -1,24 +1,27 @@
 import { createClient } from '@libsql/client'
 
-// Use Turso in production, create in-memory client for local development
-const useTurso = process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN
-
+// Create database client with lazy initialization
 let client: any
 let schemaInitialized: Promise<void>
 
-if (useTurso) {
-  // Turso (cloud SQLite) for production
-  console.log('Using Turso database')
-  client = createClient({
-    url: process.env.TURSO_DATABASE_URL!,
-    authToken: process.env.TURSO_AUTH_TOKEN!,
-  })
-} else {
-  // In-memory database for local development (or use local Turso instance)
-  console.log('Using local Turso database')
-  client = createClient({
-    url: 'file:data/local.db'
-  })
+const getClient = () => {
+  if (!client) {
+    const useTurso = process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN
+    
+    if (useTurso) {
+      console.log('Using Turso database')
+      client = createClient({
+        url: process.env.TURSO_DATABASE_URL!,
+        authToken: process.env.TURSO_AUTH_TOKEN!,
+      })
+    } else {
+      console.log('Using local Turso database')
+      client = createClient({
+        url: 'file:data/local.db'
+      })
+    }
+  }
+  return client
 }
 
 // Initialize database schema
@@ -43,15 +46,17 @@ const initSchema = async () => {
     CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON messages(timestamp);
   `
 
-  await client.executeMultiple(schema)
+  const dbClient = getClient()
+  await dbClient.executeMultiple(schema)
 }
 
-// Initialize on import and store promise
-schemaInitialized = initSchema()
-
-// Helper to ensure schema is initialized
+// Lazy initialization
+let initPromise: Promise<void> | null = null
 const ensureInitialized = async () => {
-  await schemaInitialized
+  if (!initPromise) {
+    initPromise = initSchema()
+  }
+  await initPromise
 }
 
 export interface Message {
@@ -71,8 +76,9 @@ export interface Session {
 export const dbHelpers = {
   createSession: async (id: string): Promise<Session> => {
     await ensureInitialized()
+    const dbClient = getClient()
     const timestamp = Date.now()
-    await client.execute({
+    await dbClient.execute({
       sql: 'INSERT INTO sessions (id, created_at) VALUES (?, ?)',
       args: [id, timestamp]
     })
@@ -81,7 +87,8 @@ export const dbHelpers = {
 
   getSession: async (id: string): Promise<Session | null> => {
     await ensureInitialized()
-    const result = await client.execute({
+    const dbClient = getClient()
+    const result = await dbClient.execute({
       sql: 'SELECT * FROM sessions WHERE id = ?',
       args: [id]
     })
@@ -90,8 +97,9 @@ export const dbHelpers = {
 
   endSession: async (id: string): Promise<void> => {
     await ensureInitialized()
+    const dbClient = getClient()
     const timestamp = Date.now()
-    await client.execute({
+    await dbClient.execute({
       sql: 'UPDATE sessions SET ended_at = ? WHERE id = ?',
       args: [timestamp, id]
     })
@@ -99,7 +107,8 @@ export const dbHelpers = {
 
   saveMessage: async (message: Message): Promise<Message> => {
     await ensureInitialized()
-    const result = await client.execute({
+    const dbClient = getClient()
+    const result = await dbClient.execute({
       sql: 'INSERT INTO messages (session_id, role, content, timestamp) VALUES (?, ?, ?, ?) RETURNING *',
       args: [message.session_id, message.role, message.content, message.timestamp]
     })
@@ -108,7 +117,8 @@ export const dbHelpers = {
 
   getMessages: async (sessionId: string): Promise<Message[]> => {
     await ensureInitialized()
-    const result = await client.execute({
+    const dbClient = getClient()
+    const result = await dbClient.execute({
       sql: 'SELECT * FROM messages WHERE session_id = ? ORDER BY timestamp ASC',
       args: [sessionId]
     })
@@ -123,4 +133,4 @@ export const dbHelpers = {
   },
 }
 
-export default client
+export default getClient
