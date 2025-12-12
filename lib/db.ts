@@ -38,6 +38,8 @@ const initSchema = async () => {
       session_id TEXT NOT NULL,
       role TEXT NOT NULL,
       content TEXT NOT NULL,
+      message_type TEXT DEFAULT 'text',
+      metadata TEXT,
       timestamp INTEGER NOT NULL,
       FOREIGN KEY (session_id) REFERENCES sessions(id)
     );
@@ -64,6 +66,8 @@ export interface Message {
   session_id: string
   role: 'expert' | 'learner'
   content: string
+  message_type?: 'text' | 'multiple_choice' | 'choice_response'
+  metadata?: string
   timestamp: number
 }
 
@@ -109,8 +113,15 @@ export const dbHelpers = {
     await ensureInitialized()
     const dbClient = getClient()
     const result = await dbClient.execute({
-      sql: 'INSERT INTO messages (session_id, role, content, timestamp) VALUES (?, ?, ?, ?) RETURNING *',
-      args: [message.session_id, message.role, message.content, message.timestamp]
+      sql: 'INSERT INTO messages (session_id, role, content, message_type, metadata, timestamp) VALUES (?, ?, ?, ?, ?, ?) RETURNING *',
+      args: [
+        message.session_id, 
+        message.role, 
+        message.content, 
+        message.message_type || 'text',
+        message.metadata || null,
+        message.timestamp
+      ]
     })
     return result.rows[0] as Message
   },

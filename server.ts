@@ -47,13 +47,21 @@ app.prepare().then(async () => {
       socket.emit('load-messages', messages)
     })
 
-    socket.on('send-message', async (data: { sessionId: string; role: 'expert' | 'learner'; content: string }) => {
-      const { sessionId, role, content } = data
+    socket.on('send-message', async (data: { 
+      sessionId: string; 
+      role: 'expert' | 'learner'; 
+      content: string;
+      message_type?: 'text' | 'multiple_choice' | 'choice_response';
+      metadata?: string;
+    }) => {
+      const { sessionId, role, content, message_type, metadata } = data
       
       const message: Message = {
         session_id: sessionId,
         role,
         content,
+        message_type: message_type || 'text',
+        metadata,
         timestamp: Date.now(),
       }
 

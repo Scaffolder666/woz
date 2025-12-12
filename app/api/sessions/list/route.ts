@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import getClient from '@/lib/db'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export async function GET() {
   try {
     const client = getClient()
@@ -23,6 +26,12 @@ export async function GET() {
     return NextResponse.json({ 
       sessions: result.rows,
       database: process.env.TURSO_DATABASE_URL ? 'Turso Cloud' : 'Local'
+    }, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      }
     })
   } catch (error) {
     console.error('Error listing sessions:', error)
