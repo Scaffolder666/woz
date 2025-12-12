@@ -473,11 +473,11 @@ export default function ChatPage() {
                         className={`rounded-lg px-4 py-2 ${
                           isMyMessage
                             ? 'bg-blue-600 text-white'
-                            : 'bg-green-100 text-gray-800 border border-green-300'
+                            : 'bg-blue-100 text-gray-800 border border-blue-300'
                         }`}
                       >
                         <p className="text-xs opacity-75 mb-1">Answer to: {responseData.question}</p>
-                        <p className="font-medium">✓ {responseData.answer}</p>
+                        <p className="font-medium">{responseData.answer}</p>
                       </div>
                     ) : (
                       <div

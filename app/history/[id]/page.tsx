@@ -247,7 +247,7 @@ export default function TranscriptPage() {
                           </span>
                         )}
                         {isChoiceResponse && (
-                          <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">
+                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-medium">
                             Answer
                           </span>
                         )}
@@ -270,7 +270,7 @@ export default function TranscriptPage() {
                       ) : isChoiceResponse && responseData ? (
                         <div>
                           <p className="text-xs text-gray-500 mb-1">Answer to: {responseData.question}</p>
-                          <p className="text-gray-800 font-medium">✓ {responseData.answer}</p>
+                          <p className="text-gray-800 font-medium">{responseData.answer}</p>
                         </div>
                       ) : (
                         <p className="text-gray-800 whitespace-pre-wrap break-words">
