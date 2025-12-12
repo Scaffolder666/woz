@@ -18,7 +18,12 @@ export async function GET() {
       ORDER BY s.created_at DESC
     `)
 
-    return NextResponse.json({ sessions: result.rows })
+    console.log('Sessions found:', result.rows.length)
+
+    return NextResponse.json({ 
+      sessions: result.rows,
+      database: process.env.TURSO_DATABASE_URL ? 'Turso Cloud' : 'Local'
+    })
   } catch (error) {
     console.error('Error listing sessions:', error)
     return NextResponse.json({ error: 'Failed to list sessions' }, { status: 500 })
