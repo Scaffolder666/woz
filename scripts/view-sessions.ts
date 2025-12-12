@@ -1,6 +1,8 @@
+import { config } from 'dotenv'
 import { createClient } from '@libsql/client'
-import fs from 'fs'
-import path from 'path'
+
+// Load environment variables
+config({ path: '.env.local' })
 
 // Get database client
 const client = createClient({

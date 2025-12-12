@@ -1,12 +1,9 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@libsql/client'
+import getClient from '@/lib/db'
 
 export async function GET() {
   try {
-    const client = createClient({
-      url: process.env.TURSO_DATABASE_URL || 'file:data/local.db',
-      authToken: process.env.TURSO_AUTH_TOKEN,
-    })
+    const client = getClient()
 
     // Get all sessions with message counts
     const result = await client.execute(`
