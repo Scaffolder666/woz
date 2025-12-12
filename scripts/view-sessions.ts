@@ -38,9 +38,3 @@ async function viewSessions() {
 }
 
 viewSessions().catch(console.error)
-      fs.mkdirSync(exportsDir, { recursive: true })
-    }
-    
-    exportSession(sessionId, outputPath)
-  }
-}
