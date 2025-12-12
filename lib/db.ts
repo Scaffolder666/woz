@@ -5,10 +5,14 @@ import fs from 'fs'
 // Ensure data directory exists
 const dataDir = path.join(process.cwd(), 'data')
 if (!fs.existsSync(dataDir)) {
+  console.log('Creating data directory:', dataDir)
   fs.mkdirSync(dataDir, { recursive: true })
 }
 
 const dbPath = path.join(dataDir, 'chat.db')
+console.log('Database path:', dbPath)
+console.log('Database exists:', fs.existsSync(dbPath))
+
 const db = new Database(dbPath)
 
 // Initialize database schema
