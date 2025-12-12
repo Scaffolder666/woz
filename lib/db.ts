@@ -111,4 +111,4 @@ export const dbHelpers = {
   },
 }
 
-export default db
+export default client
