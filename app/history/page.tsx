@@ -13,14 +13,18 @@ interface Session {
 export default function HistoryPage() {
   const [sessions, setSessions] = useState<Session[]>([])
   const [loading, setLoading] = useState(true)
+  const [deleting, setDeleting] = useState<string | null>(null)
 
   useEffect(() => {
     fetchSessions()
   }, [])
 
   const fetchSessions = async () => {
+    setLoading(true)
     try {
-      const res = await fetch('/api/sessions/list')
+      const res = await fetch('/api/sessions/list', {
+        cache: 'no-store' // Disable caching to always get fresh data
+      })
       const data = await res.json()
       setSessions(data.sessions)
     } catch (error) {
@@ -46,6 +50,31 @@ export default function HistoryPage() {
     return `${minutes} min`
   }
 
+  const deleteSession = async (sessionId: string) => {
+    if (!confirm('Are you sure you want to delete this session? This cannot be undone.')) {
+      return
+    }
+
+    setDeleting(sessionId)
+    try {
+      const res = await fetch(`/api/sessions/${sessionId}/delete`, {
+        method: 'DELETE',
+      })
+
+      if (res.ok) {
+        // Remove from local state
+        setSessions(sessions.filter(s => s.id !== sessionId))
+      } else {
+        alert('Failed to delete session')
+      }
+    } catch (error) {
+      console.error('Error deleting session:', error)
+      alert('Failed to delete session')
+    } finally {
+      setDeleting(null)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
@@ -62,12 +91,21 @@ export default function HistoryPage() {
             <h1 className="text-3xl font-bold text-gray-800">Session History</h1>
             <p className="text-gray-600 mt-1">View all tutoring sessions and transcripts</p>
           </div>
-          <Link
-            href="/"
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition"
-          >
-            ← Back Home
-          </Link>
+          <div className="flex gap-3">
+            <button
+              onClick={fetchSessions}
+              disabled={loading}
+              className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? '⏳ Loading...' : '🔄 Refresh'}
+            </button>
+            <Link
+              href="/"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition"
+            >
+              ← Back Home
+            </Link>
+          </div>
         </div>
 
         {sessions.length === 0 ? (
@@ -134,12 +172,21 @@ export default function HistoryPage() {
                     </div>
                   </div>
 
-                  <Link
-                    href={`/history/${session.id}`}
-                    className="ml-4 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition"
-                  >
-                    View Transcript
-                  </Link>
+                  <div className="ml-4 flex gap-2">
+                    <Link
+                      href={`/history/${session.id}`}
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition"
+                    >
+                      View Transcript
+                    </Link>
+                    <button
+                      onClick={() => deleteSession(session.id)}
+                      disabled={deleting === session.id}
+                      className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {deleting === session.id ? '⏳' : '🗑️'}
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
