@@ -38,8 +38,6 @@ const initSchema = async () => {
       session_id TEXT NOT NULL,
       role TEXT NOT NULL,
       content TEXT NOT NULL,
-      message_type TEXT DEFAULT 'text',
-      metadata TEXT,
       timestamp INTEGER NOT NULL,
       FOREIGN KEY (session_id) REFERENCES sessions(id)
     );
@@ -113,13 +111,11 @@ export const dbHelpers = {
     await ensureInitialized()
     const dbClient = getClient()
     const result = await dbClient.execute({
-      sql: 'INSERT INTO messages (session_id, role, content, message_type, metadata, timestamp) VALUES (?, ?, ?, ?, ?, ?) RETURNING *',
+      sql: 'INSERT INTO messages (session_id, role, content, timestamp) VALUES (?, ?, ?, ?) RETURNING *',
       args: [
         message.session_id, 
         message.role, 
         message.content, 
-        message.message_type || 'text',
-        message.metadata || null,
         message.timestamp
       ]
     })

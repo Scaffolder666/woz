@@ -9,14 +9,7 @@ interface Message {
   session_id: string
   role: 'expert' | 'learner'
   content: string
-  message_type?: 'text' | 'multiple_choice' | 'choice_response'
-  metadata?: string
   timestamp: number
-}
-
-interface MultipleChoiceData {
-  question: string
-  options: string[]
 }
 
 export default function ChatPage() {
@@ -29,9 +22,6 @@ export default function ChatPage() {
   const [socket, setSocket] = useState<Socket | null>(null)
   const [connected, setConnected] = useState(false)
   const [otherUserJoined, setOtherUserJoined] = useState(false)
-  const [showMCQForm, setShowMCQForm] = useState(false)
-  const [mcqQuestion, setMcqQuestion] = useState('')
-  const [mcqOptions, setMcqOptions] = useState(['', '', '', ''])
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = () => {
@@ -84,49 +74,9 @@ export default function ChatPage() {
       sessionId,
       role,
       content: inputMessage.trim(),
-      message_type: 'text'
     })
 
     setInputMessage('')
-  }
-
-  const sendMultipleChoice = () => {
-    if (!mcqQuestion.trim() || !socket || !sessionId) return
-    
-    const validOptions = mcqOptions.filter(opt => opt.trim())
-    if (validOptions.length < 2) {
-      alert('Please provide at least 2 options')
-      return
-    }
-
-    const mcqData: MultipleChoiceData = {
-      question: mcqQuestion.trim(),
-      options: validOptions
-    }
-
-    socket.emit('send-message', {
-      sessionId,
-      role,
-      content: mcqQuestion.trim(),
-      message_type: 'multiple_choice',
-      metadata: JSON.stringify(mcqData)
-    })
-
-    setShowMCQForm(false)
-    setMcqQuestion('')
-    setMcqOptions(['', '', '', ''])
-  }
-
-  const handleChoiceSelection = (messageId: number | undefined, question: string, selectedOption: string) => {
-    if (!socket || !sessionId || !messageId) return
-
-    socket.emit('send-message', {
-      sessionId,
-      role,
-      content: selectedOption,
-      message_type: 'choice_response',
-      metadata: JSON.stringify({ question, answer: selectedOption, questionId: messageId })
-    })
   }
 
   const endSession = () => {
@@ -218,23 +168,6 @@ export default function ChatPage() {
           ) : (
             messages.map((msg, idx) => {
               const isMyMessage = msg.role === role
-              const isMCQ = msg.message_type === 'multiple_choice'
-              const isChoiceResponse = msg.message_type === 'choice_response'
-              
-              let mcqData: MultipleChoiceData | null = null
-              let responseData: any = null
-              
-              if (isMCQ && msg.metadata) {
-                try {
-                  mcqData = JSON.parse(msg.metadata)
-                } catch (e) {}
-              }
-              
-              if (isChoiceResponse && msg.metadata) {
-                try {
-                  responseData = JSON.parse(msg.metadata)
-                } catch (e) {}
-              }
               
               return (
                 <div
@@ -250,57 +183,17 @@ export default function ChatPage() {
                         {formatTime(msg.timestamp)}
                       </span>
                     </div>
-                    
-                    {isMCQ && mcqData ? (
-                      <div
-                        className={`rounded-lg px-4 py-3 ${
-                          isMyMessage
+                    <div
+                      className={`rounded-lg px-4 py-2 ${
+                        isMyMessage
+                          ? msg.role === 'expert'
                             ? 'bg-purple-600 text-white'
-                            : 'bg-white text-gray-800 border-2 border-purple-300'
-                        }`}
-                      >
-                        <p className="font-semibold mb-3">{mcqData.question}</p>
-                        <div className="space-y-2">
-                          {mcqData.options.map((option, optIdx) => (
-                            <button
-                              key={optIdx}
-                              onClick={() => !isMyMessage && handleChoiceSelection(msg.id, mcqData!.question, option)}
-                              disabled={isMyMessage}
-                              className={`w-full text-left px-3 py-2 rounded-lg transition ${
-                                isMyMessage
-                                  ? 'bg-purple-500 cursor-default'
-                                  : 'bg-purple-100 hover:bg-purple-200 text-gray-800'
-                              }`}
-                            >
-                              {String.fromCharCode(65 + optIdx)}. {option}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    ) : isChoiceResponse && responseData ? (
-                      <div
-                        className={`rounded-lg px-4 py-2 ${
-                          isMyMessage
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-green-100 text-gray-800 border border-green-300'
-                        }`}
-                      >
-                        <p className="text-xs opacity-75 mb-1">Answer to: {responseData.question}</p>
-                        <p className="font-medium">✓ {responseData.answer}</p>
-                      </div>
-                    ) : (
-                      <div
-                        className={`rounded-lg px-4 py-2 ${
-                          isMyMessage
-                            ? msg.role === 'expert'
-                              ? 'bg-purple-600 text-white'
-                              : 'bg-blue-600 text-white'
-                            : 'bg-white text-gray-800 border border-gray-200'
-                        }`}
-                      >
-                        <p className="whitespace-pre-wrap break-words">{msg.content}</p>
-                      </div>
-                    )}
+                            : 'bg-blue-600 text-white'
+                          : 'bg-white text-gray-800 border border-gray-200'
+                      }`}
+                    >
+                      <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                    </div>
                   </div>
                 </div>
               )
@@ -311,89 +204,28 @@ export default function ChatPage() {
 
         {/* Input */}
         <div className="bg-white rounded-lg shadow-lg p-4">
-          {showMCQForm && isExpert ? (
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <h3 className="font-semibold text-gray-800">Create Multiple Choice Question</h3>
-                <button
-                  onClick={() => setShowMCQForm(false)}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  ✕
-                </button>
-              </div>
-              <input
-                type="text"
-                value={mcqQuestion}
-                onChange={(e) => setMcqQuestion(e.target.value)}
-                placeholder="Enter your question..."
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-              />
-              {mcqOptions.map((option, idx) => (
-                <input
-                  key={idx}
-                  type="text"
-                  value={option}
-                  onChange={(e) => {
-                    const newOptions = [...mcqOptions]
-                    newOptions[idx] = e.target.value
-                    setMcqOptions(newOptions)
-                  }}
-                  placeholder={`Option ${String.fromCharCode(65 + idx)}`}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                />
-              ))}
-              <div className="flex gap-2">
-                <button
-                  onClick={sendMultipleChoice}
-                  disabled={!mcqQuestion.trim()}
-                  className="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-semibold transition disabled:opacity-50"
-                >
-                  Send Question
-                </button>
-                <button
-                  onClick={() => setShowMCQForm(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {isExpert && (
-                <button
-                  onClick={() => setShowMCQForm(true)}
-                  disabled={!connected}
-                  className="w-full bg-purple-100 hover:bg-purple-200 text-purple-700 px-4 py-2 rounded-lg font-medium transition disabled:opacity-50"
-                >
-                  📝 Create Multiple Choice Question
-                </button>
-              )}
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={inputMessage}
-                  onChange={(e) => setInputMessage(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                  placeholder="Type your message..."
-                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  disabled={!connected}
-                />
-                <button
-                  onClick={sendMessage}
-                  disabled={!connected || !inputMessage.trim()}
-                  className={`px-6 py-3 rounded-lg font-semibold transition ${
-                    isExpert
-                      ? 'bg-purple-600 hover:bg-purple-700'
-                      : 'bg-blue-600 hover:bg-blue-700'
-                  } text-white disabled:opacity-50 disabled:cursor-not-allowed`}
-                >
-                  Send
-                </button>
-              </div>
-            </div>
-          )}
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+              placeholder="Type your message..."
+              className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={!connected}
+            />
+            <button
+              onClick={sendMessage}
+              disabled={!connected || !inputMessage.trim()}
+              className={`px-6 py-3 rounded-lg font-semibold transition ${
+                isExpert
+                  ? 'bg-purple-600 hover:bg-purple-700'
+                  : 'bg-blue-600 hover:bg-blue-700'
+              } text-white disabled:opacity-50 disabled:cursor-not-allowed`}
+            >
+              Send
+            </button>
+          </div>
         </div>
       </div>
     </div>
