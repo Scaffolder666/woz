@@ -1,10 +1,18 @@
 import { NextResponse } from 'next/server'
+import { dbHelpers } from '@/lib/db'
 import Database from 'better-sqlite3'
 import path from 'path'
+import fs from 'fs'
 
 export async function GET() {
   try {
-    const dbPath = path.join(process.cwd(), 'data', 'chat.db')
+    // Ensure data directory exists
+    const dataDir = path.join(process.cwd(), 'data')
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true })
+    }
+
+    const dbPath = path.join(dataDir, 'chat.db')
     const db = new Database(dbPath)
 
     // Get all sessions with message counts
@@ -19,6 +27,8 @@ export async function GET() {
       GROUP BY s.id
       ORDER BY s.created_at DESC
     `).all()
+
+    db.close()
 
     return NextResponse.json({ sessions })
   } catch (error) {
