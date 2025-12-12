@@ -266,16 +266,25 @@ Railway 支持 SQLite 持久存储，最适合这个项目：
    - 选择你的 `Scaffolder666/woz` 仓库
    - Railway 会自动检测配置并开始部署
 
-3. **配置域名:**
-   - 部署完成后，点击项目
+3. **配置持久化存储（重要！）:**
+   - 点击你的项目
+   - 进入 "Settings" → "Volumes"
+   - 点击 "New Volume"
+   - Mount Path: `/app/data`
+   - 点击 "Add"
+   - **重新部署**项目（点击 "Deployments" → "Deploy"）
+
+4. **配置域名:**
    - 进入 "Settings" → "Networking"
    - 点击 "Generate Domain"
    - 你会得到一个公网 URL，如 `https://woz-production.up.railway.app`
 
-4. **完成！** 🎉
-   - 数据库会持久保存
+5. **完成！** 🎉
+   - 数据库会持久保存（即使重新部署）
    - 全球可访问
    - 免费 $5 额度/月（够用）
+
+**重要提示：** 如果不配置 Volume，每次部署数据库都会被清空！
 
 ### Alternative: Deploy to Vercel (Free but no SQLite)
 
