@@ -1,4 +1,4 @@
-import { dbHelpers } from './lib/db'
+import { dbHelpers } from '../lib/db'
 import fs from 'fs'
 import path from 'path'
 import Database from 'better-sqlite3'
