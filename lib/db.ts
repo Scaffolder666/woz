@@ -48,6 +48,25 @@ const initSchema = async () => {
 
   const dbClient = getClient()
   await dbClient.executeMultiple(schema)
+  
+  // Add new columns if they don't exist (for migration)
+  try {
+    await dbClient.execute('ALTER TABLE messages ADD COLUMN message_type TEXT DEFAULT "text"')
+    console.log('✅ Added message_type column')
+  } catch (e: any) {
+    if (!e.message?.includes('duplicate column')) {
+      console.log('ℹ️ message_type column already exists')
+    }
+  }
+  
+  try {
+    await dbClient.execute('ALTER TABLE messages ADD COLUMN metadata TEXT')
+    console.log('✅ Added metadata column')
+  } catch (e: any) {
+    if (!e.message?.includes('duplicate column')) {
+      console.log('ℹ️ metadata column already exists')
+    }
+  }
 }
 
 // Lazy initialization
@@ -111,11 +130,13 @@ export const dbHelpers = {
     await ensureInitialized()
     const dbClient = getClient()
     const result = await dbClient.execute({
-      sql: 'INSERT INTO messages (session_id, role, content, timestamp) VALUES (?, ?, ?, ?) RETURNING *',
+      sql: 'INSERT INTO messages (session_id, role, content, message_type, metadata, timestamp) VALUES (?, ?, ?, ?, ?, ?) RETURNING *',
       args: [
         message.session_id, 
         message.role, 
         message.content, 
+        message.message_type || 'text',
+        message.metadata || null,
         message.timestamp
       ]
     })
