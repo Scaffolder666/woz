@@ -1,22 +1,15 @@
 import { NextResponse } from 'next/server'
-import { dbHelpers } from '@/lib/db'
-import Database from 'better-sqlite3'
-import path from 'path'
-import fs from 'fs'
+import { createClient } from '@libsql/client'
 
 export async function GET() {
   try {
-    // Ensure data directory exists
-    const dataDir = path.join(process.cwd(), 'data')
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true })
-    }
-
-    const dbPath = path.join(dataDir, 'chat.db')
-    const db = new Database(dbPath)
+    const client = createClient({
+      url: process.env.TURSO_DATABASE_URL || 'file:data/local.db',
+      authToken: process.env.TURSO_AUTH_TOKEN,
+    })
 
     // Get all sessions with message counts
-    const sessions = db.prepare(`
+    const result = await client.execute(`
       SELECT 
         s.id,
         s.created_at,
@@ -26,11 +19,9 @@ export async function GET() {
       LEFT JOIN messages m ON s.id = m.session_id
       GROUP BY s.id
       ORDER BY s.created_at DESC
-    `).all()
+    `)
 
-    db.close()
-
-    return NextResponse.json({ sessions })
+    return NextResponse.json({ sessions: result.rows })
   } catch (error) {
     console.error('Error listing sessions:', error)
     return NextResponse.json({ error: 'Failed to list sessions' }, { status: 500 })

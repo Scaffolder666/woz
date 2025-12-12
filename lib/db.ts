@@ -1,31 +1,23 @@
 import { createClient } from '@libsql/client'
-import Database from 'better-sqlite3'
-import path from 'path'
-import fs from 'fs'
 
-// Use Turso in production, SQLite locally
+// Use Turso in production, create in-memory client for local development
 const useTurso = process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN
 
-let db: any
-let tursoClient: any
+let client: any
 
 if (useTurso) {
   // Turso (cloud SQLite) for production
   console.log('Using Turso database')
-  tursoClient = createClient({
+  client = createClient({
     url: process.env.TURSO_DATABASE_URL!,
     authToken: process.env.TURSO_AUTH_TOKEN!,
   })
 } else {
-  // Local SQLite for development
-  console.log('Using local SQLite database')
-  const dataDir = path.join(process.cwd(), 'data')
-  if (!fs.existsSync(dataDir)) {
-    console.log('Creating data directory:', dataDir)
-    fs.mkdirSync(dataDir, { recursive: true })
-  }
-  const dbPath = path.join(dataDir, 'chat.db')
-  db = new Database(dbPath)
+  // In-memory database for local development (or use local Turso instance)
+  console.log('Using local Turso database')
+  client = createClient({
+    url: 'file:data/local.db'
+  })
 }
 
 // Initialize database schema
@@ -50,11 +42,7 @@ const initSchema = async () => {
     CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON messages(timestamp);
   `
 
-  if (useTurso) {
-    await tursoClient.executeMultiple(schema)
-  } else {
-    db.exec(schema)
-  }
+  await client.executeMultiple(schema)
 }
 
 // Initialize on import
@@ -77,78 +65,43 @@ export interface Session {
 export const dbHelpers = {
   createSession: async (id: string): Promise<Session> => {
     const timestamp = Date.now()
-    if (useTurso) {
-      await tursoClient.execute({
-        sql: 'INSERT INTO sessions (id, created_at) VALUES (?, ?)',
-        args: [id, timestamp]
-      })
-    } else {
-      const stmt = db.prepare('INSERT INTO sessions (id, created_at) VALUES (?, ?)')
-      stmt.run(id, timestamp)
-    }
+    await client.execute({
+      sql: 'INSERT INTO sessions (id, created_at) VALUES (?, ?)',
+      args: [id, timestamp]
+    })
     return { id, created_at: timestamp, ended_at: null }
   },
 
   getSession: async (id: string): Promise<Session | null> => {
-    if (useTurso) {
-      const result = await tursoClient.execute({
-        sql: 'SELECT * FROM sessions WHERE id = ?',
-        args: [id]
-      })
-      return result.rows[0] as Session | null
-    } else {
-      const stmt = db.prepare('SELECT * FROM sessions WHERE id = ?')
-      return stmt.get(id) as Session | null
-    }
+    const result = await client.execute({
+      sql: 'SELECT * FROM sessions WHERE id = ?',
+      args: [id]
+    })
+    return result.rows[0] as Session | null
   },
 
   endSession: async (id: string): Promise<void> => {
     const timestamp = Date.now()
-    if (useTurso) {
-      await tursoClient.execute({
-        sql: 'UPDATE sessions SET ended_at = ? WHERE id = ?',
-        args: [timestamp, id]
-      })
-    } else {
-      const stmt = db.prepare('UPDATE sessions SET ended_at = ? WHERE id = ?')
-      stmt.run(timestamp, id)
-    }
+    await client.execute({
+      sql: 'UPDATE sessions SET ended_at = ? WHERE id = ?',
+      args: [timestamp, id]
+    })
   },
 
   saveMessage: async (message: Message): Promise<Message> => {
-    if (useTurso) {
-      const result = await tursoClient.execute({
-        sql: 'INSERT INTO messages (session_id, role, content, timestamp) VALUES (?, ?, ?, ?) RETURNING *',
-        args: [message.session_id, message.role, message.content, message.timestamp]
-      })
-      return result.rows[0] as Message
-    } else {
-      const stmt = db.prepare(
-        'INSERT INTO messages (session_id, role, content, timestamp) VALUES (?, ?, ?, ?)'
-      )
-      const info = stmt.run(
-        message.session_id,
-        message.role,
-        message.content,
-        message.timestamp
-      )
-      return { ...message, id: info.lastInsertRowid as number }
-    }
+    const result = await client.execute({
+      sql: 'INSERT INTO messages (session_id, role, content, timestamp) VALUES (?, ?, ?, ?) RETURNING *',
+      args: [message.session_id, message.role, message.content, message.timestamp]
+    })
+    return result.rows[0] as Message
   },
 
   getMessages: async (sessionId: string): Promise<Message[]> => {
-    if (useTurso) {
-      const result = await tursoClient.execute({
-        sql: 'SELECT * FROM messages WHERE session_id = ? ORDER BY timestamp ASC',
-        args: [sessionId]
-      })
-      return result.rows as Message[]
-    } else {
-      const stmt = db.prepare(
-        'SELECT * FROM messages WHERE session_id = ? ORDER BY timestamp ASC'
-      )
-      return stmt.all(sessionId) as Message[]
-    }
+    const result = await client.execute({
+      sql: 'SELECT * FROM messages WHERE session_id = ? ORDER BY timestamp ASC',
+      args: [sessionId]
+    })
+    return result.rows as Message[]
   },
 
   getSessionTranscript: async (sessionId: string): Promise<{ session: Session; messages: Message[] }> => {

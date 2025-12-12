@@ -77,7 +77,7 @@ To allow Expert and Learner to use different computers:
 
 - **Frontend**: Next.js 14 + TypeScript + Tailwind CSS
 - **Real-time**: Socket.IO
-- **Database**: SQLite (via better-sqlite3)
+- **Database**: Turso (cloud SQLite via @libsql/client)
 - **Session IDs**: nanoid
 
 ## Database Schema
@@ -298,7 +298,17 @@ turso db tokens create woz-db
 
 ### 本地开发
 
-本地开发会自动使用 SQLite 文件数据库（`data/chat.db`），不需要配置 Turso。
+本地开发会自动使用本地 Turso 数据库（`data/local.db`），不需要配置云端 Turso。
+
+```bash
+npm run dev
+```
+
+如果想查看 sessions：
+
+```bash
+npm run sessions
+```
 
 ## Troubleshooting
 
